@@ -15,7 +15,7 @@ SHORTHAND_MAP = {
     "hrs": "hours",
     "sec": "second",
     "secs": "seconds",
-    
+
     # Task Actions & Objects
     "msg": "message",
     "mtg": "meeting",
@@ -26,19 +26,19 @@ SHORTHAND_MAP = {
     "info": "information",
     "calc": "calculate",
     "chk": "check",
-    
+
     # Connectors & Misc
     "abt": "about",
     "b4": "before",
     "w/": "with",
     "w/o": "without",
-    "asap": "immediately"
+#NOTE: got rid of asap, could be misinterpreted as a task description rather than a time entity, or maybe used as priority
 }
 
 
 WAKE_WORDS = (
-    r"^remind me to\s+", 
-    r"^please\s+", 
-    r"^can you\s+", 
-    r"^i need to\s+"
+    r"^remind me to\s+",
+    r"^please\s+",
+    r"^can you\s+",
+    r"^i need to\s+",
 )

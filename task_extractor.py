@@ -17,12 +17,12 @@ def extract_task(text: str, entities: dict | None = None) -> str | None:
             if value and isinstance(value, str):
                 # Remove the entity AND a leading preposition if one is glued to it.
                 # example: "at 3pm" / "by Friday" / "in Conference Room B"
-                # This is surgical: it only strips the prep that introduced this entity.
+                #only strips the prep that introduced this entity.
                 prep_pattern = (
                     r"\b(?:at|by|on|before|in|from|near|to)\s+" + re.escape(value)
                 )
                 task_text = re.sub(prep_pattern, "", task_text, flags=re.IGNORECASE)
-                # Also remove the bare value if it appeared without a preposition
+                # remove the bare value if it appeared without a preposition
                 task_text = re.sub(
                     r"\b" + re.escape(value) + r"\b", "", task_text,
                     flags=re.IGNORECASE

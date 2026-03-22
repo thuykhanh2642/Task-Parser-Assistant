@@ -5,14 +5,25 @@ import re
 import contractions
 
 
+
+
+nlp = English()
+tokenizer = nlp.tokenizer
+sc = SpellChecker()
+ 
+# Words the spellchecker doesn't know but we don't want "fixed"
+PROTECTED = {"eod", "hdmi", "gmail", "uber", "lyft", "venmo", "wifi", "covid", "ai", "api", "url", "pdf", "ios", "sql",}
+    
+    
+    
+    
+
 def preprocess_text(txt: str) -> str:
     txt = contractions.fix(txt) # type: ignore
     txt = re.sub(r'(\d)([a-zA-Z])', r'\1 \2', txt)
     txt = re.sub("|".join(WAKE_WORDS), "", txt, flags=re.IGNORECASE) # Renive wake words
     
-    # Tokenization
-    nlp = English()
-    tokenizer = nlp.tokenizer
+
     tokens = tokenizer(txt)
     sc = SpellChecker()
 
@@ -23,16 +34,16 @@ def preprocess_text(txt: str) -> str:
         word_lower = word.lower()
 
         if word_lower in SHORTHAND_MAP: # Map to full length word
-            if word.istitle():
-                word = SHORTHAND_MAP[word_lower].capitalize()
-            else:
-                word = SHORTHAND_MAP[word_lower]
+            replacement = SHORTHAND_MAP[word_lower]
+            word = replacement.capitalize() if word.istitle() else replacement# Preserve original casing
+
 
         elif word.isupper() and len(word) > 1: # Skip Acronyms
             pass
-
-        elif token.is_alpha: # Fixes misspelled words
-            if sc.unknown([word]):
+        #CHANGE: spellcheck only for lowercase, nonshort, non protected.
+        #
+        elif token.is_alpha and word_lower not in PROTECTED:
+            if word.islower() and len(word) > 2 and sc.unknown([word]):
                 correction = sc.correction(word)
                 if correction is not None:
                     word = correction

@@ -1,4 +1,3 @@
-
 import spacy
 from preprocess import preprocess_text
 
@@ -22,14 +21,18 @@ patterns = [
 
 ruler.add_patterns(patterns)
 
+# CHANGE: set of location labels pulled out to avoid rebuilding a list every loop iteration
+_LOCATION_LABELS = {"GPE", "LOC", "FAC", "ORG"}
+
 def extract_entities(txt: str) -> dict:
     doc = nlp(txt)
     
     extracted = {
         "date": None,
         "time": None,
-        "person": None,
-        "location": None,
+        "person": [],       # CHANGE: list instead of None — captures ALL people
+        "location": [],     # CHANGE: list instead of None — captures ALL locations (ex: "at the library and the cafe" should get both)
+        "command": None,    # CHANGE: added — the COMMAND ruler patterns were defined above but never read back
         "priority": None,
         "category": None,
     }
@@ -39,30 +42,61 @@ def extract_entities(txt: str) -> dict:
             extracted['date'] = ent.text
         if ent.label_ == "TIME" and not extracted["time"]:
             extracted['time'] = ent.text
-        if ent.label_ == "PERSON" and not extracted["person"]:
-            extracted['person'] = ent.text
-        if ent.label_ in ["GPE", "LOC", "FAC", "ORG"] and not extracted["location"]:
-            extracted['location'] = ent.text
+        # CHANGE: append instead of first-only, skip duplicates
+        if ent.label_ == "PERSON":
+            if ent.text not in extracted["person"]:
+                extracted["person"].append(ent.text)
+        # CHANGE: uses the _LOCATION_LABELS set, appends instead of first-only
+        if ent.label_ in _LOCATION_LABELS:
+            if ent.text not in extracted["location"]:
+                extracted["location"].append(ent.text)
+        # CHANGE: reads back the COMMAND label from the entity ruler
+        if ent.label_ == "COMMAND" and not extracted["command"]:
+            extracted["command"] = ent.text
+
+    # CHANGE: return None instead of empty list for cleaner output
+    extracted["person"] = extracted["person"] or None
+    extracted["location"] = extracted["location"] or None
     
     lower_txt = txt.lower()
     
     # Check priority
-    if any(word in lower_txt for word in ["urgent", "asap", "sharp", "emergency"]):
+    # CHANGE: added "immediately" (what preprocess expands "asap" into if shorthand map is used) and "critical". Added a Medium tier for "important", "soon", "eod", "end of day".
+    if any(word in lower_txt for word in ["urgent", "asap", "immediately", "emergency", "critical"]):
         extracted["priority"] = "High"
-    elif "whenever" in lower_txt:
+    elif any(word in lower_txt for word in ["important", "soon", "eod", "end of day"]):
+        extracted["priority"] = "Medium"
+    elif any(word in lower_txt for word in ["whenever", "no rush", "eventually", "low priority"]):
         extracted["priority"] = "Low"
     else:
         extracted["priority"] = "Normal"
         
-    # Check category 
-    if any(word in lower_txt for word in ["gym", "workout", "run"]):
-        extracted["category"] = "Health"
-    elif any(word in lower_txt for word in ["meeting", "manager", "report", "eod"]):
-        extracted["category"] = "Work"
-    elif any(word in lower_txt for word in ["buy", "store", "groceries", "shop"]):
-        extracted["category"] = "Errands"
+    # Check category
+    # CHANGE: replaced if/elif chain with keyword scoring so the best-matching category wins rather than whichever rule comes first.
+    extracted["category"] = _classify_category(lower_txt)
 
     return extracted
+
+"""
+CHANGE: category logic extracted into its own function with scoring.
+The old if/elif chain meant "call the manager" always hit Work (manager)and never considered Communication (call). Scoring picks the category
+with the most keyword hits. Also expanded with Communication, Finance, Meeting."""
+_CATEGORY_RULES = [
+    ("Health",        ["gym", "workout", "run", "doctor", "dentist", "prescription", "therapy", "checkup"]),
+    ("Work",          ["meeting", "manager", "report", "eod", "review", "submit", "deploy", "presentation", "deadline"]),
+    ("Errands",       ["buy", "store", "groceries", "shop", "pick up", "drop off", "return"]),
+    ("Communication", ["email", "call", "message", "text", "send", "reply", "contact"]),
+    ("Meeting",       ["dinner", "lunch", "standup", "sync", "1-on-1"]),
+    ("Finance",       ["tax", "invoice", "payment", "budget", "accounting", "bill"]),
+]
+
+def _classify_category(lower_txt: str) -> str | None:
+    scores = {}
+    for category, keywords in _CATEGORY_RULES:
+        hits = sum(1 for kw in keywords if kw in lower_txt)
+        if hits:
+            scores[category] = hits
+    return max(scores, key=scores.get) if scores else None
 
 
 if __name__ == "__main__":
