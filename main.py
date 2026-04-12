@@ -1,8 +1,8 @@
 from parser import parse_task
 
 
-def main():
-    print("=== Task Parser NLP ===")
+def main() -> None:
+    print("=== Task Parser Assistant ===")
     print("Enter a task sentence. Type 'q' to quit.\n")
 
     while True:
@@ -18,14 +18,13 @@ def main():
 
         try:
             result = parse_task(text)
-        except Exception as e:
-            print(f"  Error parsing task: {e}")
+        except Exception as exc:
+            print(f"  Error parsing task: {exc}")
             continue
 
         print("\nParsed Output:")
-        for key, value in result.items():
-            if value is not None:
-                print(f"  {key:>14}: {value}")
+        for key, value in result.model_dump(mode="json").items():
+            print(f"  {key:>14}: {value}")
         print("-" * 40)
 
 

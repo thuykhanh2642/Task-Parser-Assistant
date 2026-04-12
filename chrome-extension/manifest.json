@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "Task Parser Assistant",
+  "version": "1.0.0",
+  "description": "Parse natural-language tasks through the Task Parser Assistant API.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "http://localhost:8000/*"
+  ],
+  "action": {
+    "default_title": "Task Parser Assistant",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html"
+}

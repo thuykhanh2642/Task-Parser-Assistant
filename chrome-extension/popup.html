@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Task Parser Assistant</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="panel">
+    <section class="hero">
+      <p class="eyebrow">Chrome Extension</p>
+      <h1>Task Parser Assistant</h1>
+      <p class="subtitle">Turn natural-language tasks into structured output from your browser.</p>
+    </section>
+
+    <label class="field">
+      <span>Task</span>
+      <textarea id="taskInput" rows="5" placeholder="Email Sarah tomorrow at 3pm about the demo"></textarea>
+    </label>
+
+    <label class="field">
+      <span>Backend URL</span>
+      <input id="apiUrl" type="url" placeholder="http://127.0.0.1:8000">
+    </label>
+
+    <div class="actions">
+      <button id="parseButton" type="button">Parse Task</button>
+      <button id="saveButton" type="button" class="secondary">Save URL</button>
+    </div>
+
+    <p id="statusMessage" class="status" aria-live="polite"></p>
+
+    <section>
+      <div class="result-header">
+        <h2>Result</h2>
+        <span id="confidenceBadge" class="badge badge-muted">No parse yet</span>
+      </div>
+      <div id="summaryCards" class="cards"></div>
+      <div id="feedbackSection" class="feedback"></div>
+      <pre id="resultOutput" class="result">No result yet.</pre>
+    </section>
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
