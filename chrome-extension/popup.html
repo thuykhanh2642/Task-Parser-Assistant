@@ -29,6 +29,10 @@
       <button id="saveButton" type="button" class="secondary">Save URL</button>
     </div>
 
+    <div class="actions actions-reminder">
+      <button id="scheduleButton" type="button" disabled>Schedule Reminder</button>
+    </div>
+
     <p id="statusMessage" class="status" aria-live="polite"></p>
 
     <section>
@@ -36,6 +40,7 @@
         <h2>Result</h2>
         <span id="confidenceBadge" class="badge badge-muted">No parse yet</span>
       </div>
+      <div id="reminderSummary" class="reminder-summary">No reminder scheduled.</div>
       <div id="summaryCards" class="cards"></div>
       <div id="feedbackSection" class="feedback"></div>
       <pre id="resultOutput" class="result">No result yet.</pre>

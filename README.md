@@ -57,6 +57,21 @@ The popup lets you:
 - paste a task
 - configure the backend URL from the popup or options page
 - send the task to the local API and view structured results
+- convert parsed date/time into a local reminder timestamp
+- save reminders in Chrome storage
+- schedule `chrome.alarms`
+- show Chrome notifications when alarms fire
+
+### Reminder MVP behavior
+
+For phrases like `Email Sarah about the launch plan tomorrow at 3pm`, the flow is:
+
+1. The popup sends the text to the backend.
+2. The backend returns parsed `date` and `time`.
+3. The extension resolves those into a concrete browser-local timestamp.
+4. The extension stores the reminder in `chrome.storage.local`.
+5. The extension creates a `chrome.alarms` entry like `task_<timestamp>`.
+6. When the alarm fires, the background service worker shows a Chrome notification.
 
 ## Tests
 

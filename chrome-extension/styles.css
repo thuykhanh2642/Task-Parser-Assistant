@@ -99,6 +99,10 @@ textarea {
   gap: 10px;
 }
 
+.actions-reminder {
+  margin-top: 10px;
+}
+
 button {
   border: 0;
   border-radius: 999px;
@@ -125,6 +129,17 @@ button.secondary {
   margin: 12px 0 0;
   font-size: 13px;
   color: var(--muted);
+}
+
+.reminder-summary {
+  margin: 12px 0;
+  border: 1px dashed var(--panel-border);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.5);
+  color: var(--secondary);
+  font-size: 13px;
+  line-height: 1.4;
 }
 
 .result {
