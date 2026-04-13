@@ -9,24 +9,17 @@
 <body>
   <main class="panel">
     <section class="hero">
-      <p class="eyebrow">Chrome Extension</p>
       <h1>Task Parser Assistant</h1>
-      <p class="subtitle">Turn natural-language tasks into structured output from your browser.</p>
+      <p class="subtitle">Turn natural-language tasks into reminders from your browser.</p>
     </section>
 
     <label class="field">
       <span>Task</span>
-      <textarea id="taskInput" rows="5" placeholder="Email Sarah tomorrow at 3pm about the demo"></textarea>
-    </label>
-
-    <label class="field">
-      <span>Backend URL</span>
-      <input id="apiUrl" type="url" placeholder="http://127.0.0.1:8000">
+      <textarea id="taskInput" rows="5" placeholder="Remind me to call Sam later today"></textarea>
     </label>
 
     <div class="actions">
       <button id="parseButton" type="button">Parse Task</button>
-      <button id="saveButton" type="button" class="secondary">Save URL</button>
     </div>
 
     <div class="actions actions-reminder">

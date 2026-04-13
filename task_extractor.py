@@ -26,6 +26,7 @@ def extract_task(text: str, entities: dict[str, Any] | None = None) -> str | Non
     if entities:
         date = entities.get("date")
         time = entities.get("time")
+        command = entities.get("command")
 
         if isinstance(time, str):
             task_text = _remove_adjoined_entity(task_text, time, _TIME_PREPOSITIONS)
@@ -33,6 +34,8 @@ def extract_task(text: str, entities: dict[str, Any] | None = None) -> str | Non
         if isinstance(date, str):
             task_text = _remove_adjoined_entity(task_text, date, _DATE_PREPOSITIONS)
             if isinstance(time, str) and _is_specific_time(time) and date.lower() in _LOOSE_SCHEDULING_DATES:
+                task_text = _remove_loose_date_aside(task_text, date)
+            elif command == "remind" and date.lower() in _LOOSE_SCHEDULING_DATES:
                 task_text = _remove_loose_date_aside(task_text, date)
 
     task_text = _TRAILING_PUNCTUATION.sub("", task_text)

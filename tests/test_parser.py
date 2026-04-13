@@ -54,6 +54,8 @@ def test_api_parse_endpoint() -> None:
         ("Send invoice to Acme next week", {"task": "Send invoice to Acme next week", "date": "next week"}),
         ("Message Sam about dinner tonight", {"task": "Message Sam about dinner tonight", "date": "tonight"}),
         ("Remind me to call the architect at 2:30 PM sharp.", {"task": "call the architect sharp.", "time": "2:30 PM"}),
+        ("Remind me to do homework for cs374 today", {"task": "do homework for cs374", "date": "today", "command": "remind", "category": "School"}),
+        ("Remind me to call Sam later today", {"task": "call Sam later today", "date": "today", "time": "later today"}),
     ],
 )
 def test_representative_phrases(phrase: str, expected: dict[str, str]) -> None:
@@ -72,3 +74,12 @@ def test_spacy_person_command_prefix_is_removed() -> None:
 
     assert result.person == ["Sarah"]
     assert result.task == "Email Sarah about the launch plan"
+
+
+def test_reminder_intent_survives_wake_word_preprocessing() -> None:
+    result = parse_task("Remind me to do homework for cs374 today")
+
+    assert result.task == "do homework for cs374"
+    assert result.date == "today"
+    assert result.command == "remind"
+    assert result.category == "School"

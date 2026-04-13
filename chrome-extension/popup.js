@@ -1,7 +1,6 @@
 const DEFAULT_API_URL = "http://127.0.0.1:8000";
 
 const taskInput = document.getElementById("taskInput");
-const apiUrlInput = document.getElementById("apiUrl");
 const resultOutput = document.getElementById("resultOutput");
 const statusMessage = document.getElementById("statusMessage");
 const summaryCards = document.getElementById("summaryCards");
@@ -9,26 +8,13 @@ const feedbackSection = document.getElementById("feedbackSection");
 const confidenceBadge = document.getElementById("confidenceBadge");
 const reminderSummary = document.getElementById("reminderSummary");
 const parseButton = document.getElementById("parseButton");
-const saveButton = document.getElementById("saveButton");
 const scheduleButton = document.getElementById("scheduleButton");
 
 let latestParsedResult = null;
 let latestReminderAt = null;
 
-async function loadSettings() {
-  const { apiUrl } = await chrome.storage.sync.get({ apiUrl: DEFAULT_API_URL });
-  apiUrlInput.value = apiUrl;
-}
-
-async function saveSettings() {
-  const apiUrl = apiUrlInput.value.trim() || DEFAULT_API_URL;
-  await chrome.storage.sync.set({ apiUrl });
-  statusMessage.textContent = "Backend URL saved.";
-}
-
 async function parseTask() {
   const text = taskInput.value.trim();
-  const apiUrl = apiUrlInput.value.trim() || DEFAULT_API_URL;
 
   if (!text) {
     statusMessage.textContent = "Enter a task first.";
@@ -47,7 +33,7 @@ async function parseTask() {
   latestReminderAt = null;
 
   try {
-    const response = await fetch(`${apiUrl}/parse`, {
+    const response = await fetch(`${DEFAULT_API_URL}/parse`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text })
@@ -59,10 +45,11 @@ async function parseTask() {
     }
 
     const data = await response.json();
-    const reminderAt = resolveReminderTimestamp(data.date, data.time);
+    const reminderAt = resolveReminderTimestamp(data);
     latestParsedResult = data;
     latestReminderAt = reminderAt;
     renderResult(data);
+
     if (reminderAt) {
       reminderSummary.textContent = `Reminder will be scheduled for ${formatDateTime(reminderAt)}.`;
       scheduleButton.disabled = false;
@@ -87,7 +74,7 @@ function renderResult(data) {
     ["Task", data.task || "Not identified"],
     ["Command", data.command || "Not identified"],
     ["Date", data.date || "None"],
-    ["Time", data.time || "None"],
+    ["Time", data.time || inferTimeText(data) || "None"],
     ["People", (data.person || []).join(", ") || "None"],
     ["Location", (data.location || []).join(", ") || "None"],
     ["Priority", data.priority || "Normal"],
@@ -126,7 +113,7 @@ async function scheduleReminder() {
     rawText: latestParsedResult.raw_text,
     task: latestParsedResult.task || latestParsedResult.raw_text,
     date: latestParsedResult.date,
-    time: latestParsedResult.time,
+    time: latestParsedResult.time || inferTimeText(latestParsedResult),
     reminderAt: latestReminderAt.toISOString(),
     parseResult: latestParsedResult
   };
@@ -167,14 +154,16 @@ function confidenceClass(value) {
   return "badge-low";
 }
 
-function resolveReminderTimestamp(dateText, timeText) {
+function resolveReminderTimestamp(parseResult) {
+  const dateText = parseResult?.date;
+  const timeText = parseResult?.time || inferTimeText(parseResult);
   if (!dateText || !timeText) {
     return null;
   }
 
   const now = new Date();
   const baseDate = resolveDate(dateText, now);
-  const timeParts = resolveTime(timeText);
+  const timeParts = resolveTime(timeText, baseDate, now);
 
   if (!baseDate || !timeParts) {
     return null;
@@ -184,10 +173,45 @@ function resolveReminderTimestamp(dateText, timeText) {
   reminderAt.setHours(timeParts.hours, timeParts.minutes, 0, 0);
 
   if (reminderAt <= now) {
+    if (isSameLocalDay(baseDate, now)) {
+      return bumpFutureReminder(reminderAt, now);
+    }
     return null;
   }
 
   return reminderAt;
+}
+
+function inferTimeText(parseResult) {
+  const haystacks = [
+    parseResult?.raw_text,
+    parseResult?.cleaned_text,
+    parseResult?.task
+  ].filter(Boolean);
+
+  for (const value of haystacks) {
+    const normalized = String(value).toLowerCase();
+    if (normalized.includes("later today")) {
+      return "later today";
+    }
+    if (normalized.includes("later tonight")) {
+      return "later tonight";
+    }
+    if (normalized.includes("this morning")) {
+      return "this morning";
+    }
+    if (normalized.includes("this afternoon")) {
+      return "this afternoon";
+    }
+    if (normalized.includes("this evening")) {
+      return "this evening";
+    }
+    if (normalized.includes("soon")) {
+      return "soon";
+    }
+  }
+
+  return null;
 }
 
 function resolveDate(value, now) {
@@ -230,8 +254,12 @@ function resolveDate(value, now) {
   return null;
 }
 
-function resolveTime(value) {
+function resolveTime(value, baseDate, now) {
   const normalized = String(value).trim().toLowerCase();
+  const fuzzyTime = resolveFuzzyTime(normalized, baseDate, now);
+  if (fuzzyTime) {
+    return fuzzyTime;
+  }
 
   if (normalized === "noon") {
     return { hours: 12, minutes: 0 };
@@ -261,6 +289,74 @@ function resolveTime(value) {
   return { hours, minutes };
 }
 
+function resolveFuzzyTime(value, baseDate, now) {
+  if (!baseDate) {
+    return null;
+  }
+
+  const sameDay = isSameLocalDay(baseDate, now);
+
+  if (value === "later today") {
+    return toTimeParts(sameDay ? addHoursRounded(now, 2) : setTime(baseDate, 17, 0));
+  }
+  if (value === "later tonight") {
+    return { hours: 20, minutes: 0 };
+  }
+  if (value === "this morning") {
+    return { hours: 9, minutes: 0 };
+  }
+  if (value === "this afternoon") {
+    return { hours: 15, minutes: 0 };
+  }
+  if (value === "this evening") {
+    return { hours: 18, minutes: 0 };
+  }
+  if (value === "soon") {
+    return toTimeParts(addMinutesRounded(now, 30));
+  }
+
+  return null;
+}
+
+function addHoursRounded(date, hoursToAdd) {
+  const next = new Date(date);
+  next.setMinutes(0, 0, 0);
+  next.setHours(next.getHours() + hoursToAdd);
+  return next;
+}
+
+function addMinutesRounded(date, minutesToAdd) {
+  const next = new Date(date.getTime() + minutesToAdd * 60 * 1000);
+  next.setSeconds(0, 0);
+  return next;
+}
+
+function setTime(date, hours, minutes) {
+  const next = new Date(date);
+  next.setHours(hours, minutes, 0, 0);
+  return next;
+}
+
+function toTimeParts(date) {
+  return { hours: date.getHours(), minutes: date.getMinutes() };
+}
+
+function isSameLocalDay(left, right) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function bumpFutureReminder(reminderAt, now) {
+  const bumped = new Date(reminderAt);
+  if (bumped <= now) {
+    bumped.setTime(addMinutesRounded(now, 15).getTime());
+  }
+  return bumped;
+}
+
 function nextWeekday(baseDate, targetWeekday) {
   const date = new Date(baseDate);
   const delta = (targetWeekday - date.getDay() + 7) % 7 || 7;
@@ -285,6 +381,4 @@ function escapeHtml(value) {
 }
 
 parseButton.addEventListener("click", parseTask);
-saveButton.addEventListener("click", saveSettings);
 scheduleButton.addEventListener("click", scheduleReminder);
-document.addEventListener("DOMContentLoaded", loadSettings);

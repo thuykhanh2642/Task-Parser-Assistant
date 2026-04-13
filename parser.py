@@ -8,10 +8,10 @@ from task_extractor import extract_task
 
 def parse_task(text: str) -> ParseResponse:
     cleaned_text = preprocess_text(text)
-    entities = extract_entities(cleaned_text)
+    entities = extract_entities(cleaned_text, original_text=text)
     task = extract_task(cleaned_text, entities)
     warnings, ambiguities = _analyze_parse(cleaned_text, task, entities)
-    confidence = _estimate_confidence(cleaned_text, task, entities, warnings, ambiguities)
+    confidence = estimate_confidence(cleaned_text, task, entities, warnings, ambiguities)
 
     return ParseResponse(
         raw_text=text,
@@ -48,7 +48,7 @@ def _analyze_parse(
         warnings.append("Task text was reduced significantly during cleanup.")
 
     if not entities.get("command"):
-        warnings.append("No explicit action verb was identified.")
+        warnings.append("No explicit task command was identified.")
 
     if len(entities.get("person") or []) > 1:
         ambiguities.append("Multiple people were detected; the primary assignee or recipient may be unclear.")
@@ -68,13 +68,13 @@ def _analyze_parse(
     return warnings, ambiguities
 
 
-def _estimate_confidence(
+def estimate_confidence(
     cleaned_text: str,
     task: str | None,
     entities: dict,
     warnings: list[str],
     ambiguities: list[str],
-) -> float:
+):
     score = 0.35
 
     if task:

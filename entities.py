@@ -27,6 +27,7 @@ _COMMAND_PATTERNS = [
     {"label": "COMMAND", "pattern": [{"lower": "call"}]},
 ]
 _CATEGORY_RULES = [
+    ("School", ["homework", "assignment", "exam", "quiz", "lecture", "study", "course", "class", "professor", "cs", "math", "biology"]),
     ("Health", ["gym", "workout", "run", "doctor", "dentist", "prescription", "therapy", "checkup"]),
     ("Work", ["meeting", "manager", "report", "eod", "review", "submit", "deploy", "presentation", "deadline"]),
     ("Errands", ["buy", "store", "groceries", "shop", "pick up", "drop off", "return"]),
@@ -36,6 +37,7 @@ _CATEGORY_RULES = [
 ]
 _TIME_REGEX = re.compile(
     r"\b("
+    r"later today|later tonight|soon|"
     r"\d{1,2}:\d{2}\s?(?:am|pm)?|"
     r"\d{1,2}\s?(?:am|pm)|"
     r"noon|midnight|"
@@ -92,7 +94,7 @@ def _install_ruler(nlp: Language) -> None:
     ruler.add_patterns([*_DATE_PATTERNS, *_COMMAND_PATTERNS])
 
 
-def extract_entities(txt: str) -> dict[str, Any]:
+def extract_entities(txt: str, original_text: str | None = None) -> dict[str, Any]:
     nlp, backend = _load_nlp()
     doc = nlp(txt)
 
@@ -122,6 +124,7 @@ def extract_entities(txt: str) -> dict[str, Any]:
             extracted["command"] = ent.text
 
     _fill_regex_entities(txt, extracted)
+    _fill_original_text_intent(original_text or txt, extracted)
 
     lower_txt = txt.lower()
     if any(word in lower_txt for word in ["urgent", "asap", "immediately", "emergency", "critical"]):
@@ -170,6 +173,13 @@ def _fill_regex_entities(text: str, extracted: dict[str, Any]) -> None:
             extracted["command"] = match.group(1).lower()
 
 
+def _fill_original_text_intent(text: str, extracted: dict[str, Any]) -> None:
+    if not extracted["command"]:
+        match = re.match(r"^\s*(remind me to|remind me|remind)\b", text, re.IGNORECASE)
+        if match:
+            extracted["command"] = "remind"
+
+
 def _normalize_person_entity(value: str) -> str | None:
     candidate = value.strip(" ,.;:!?")
     if not candidate:
@@ -203,6 +213,8 @@ def _classify_category(lower_txt: str) -> str | None:
         hits = sum(1 for keyword in keywords if keyword in lower_txt)
         if hits:
             scores[category] = hits
+    if re.search(r"\b[a-z]{2,}\d{2,}\b", lower_txt):
+        scores["School"] = scores.get("School", 0) + 2
     return max(scores, key=scores.get) if scores else None
 
 
