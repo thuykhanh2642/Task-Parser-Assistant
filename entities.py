@@ -38,6 +38,7 @@ _CATEGORY_RULES = [
 _TIME_REGEX = re.compile(
     r"\b("
     r"later today|later tonight|soon|"
+    r"in\s+\d+\s+(?:second|seconds|minute|minutes|hour|hours)|"
     r"\d{1,2}:\d{2}\s?(?:am|pm)?|"
     r"\d{1,2}\s?(?:am|pm)|"
     r"noon|midnight|"

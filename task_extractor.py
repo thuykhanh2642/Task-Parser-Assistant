@@ -8,6 +8,10 @@ _LEADING_PUNCTUATION = re.compile(r"^\s*[,;:\-]+\s*")
 _DOUBLED_PUNCTUATION = re.compile(r"\s*[,;:\-]+\s*[,;:\-]+\s*")
 _TIME_PREPOSITIONS = ("at", "by", "before")
 _DATE_PREPOSITIONS = ("on", "by", "before")
+_RELATIVE_TIME_PATTERN = re.compile(
+    r"(?P<prefix>\s|^)in\s+\d+\s+(?:second|seconds|minute|minutes|hour|hours)(?=[\s,.;!?]|$)",
+    re.IGNORECASE,
+)
 _LOOSE_SCHEDULING_DATES = (
     "today",
     "tomorrow",
@@ -30,6 +34,7 @@ def extract_task(text: str, entities: dict[str, Any] | None = None) -> str | Non
 
         if isinstance(time, str):
             task_text = _remove_adjoined_entity(task_text, time, _TIME_PREPOSITIONS)
+            task_text = _remove_relative_time_aside(task_text, time)
 
         if isinstance(date, str):
             task_text = _remove_adjoined_entity(task_text, date, _DATE_PREPOSITIONS)
@@ -63,6 +68,12 @@ def _is_specific_time(value: str) -> bool:
         or re.fullmatch(r"\d{1,2}\s?(?:am|pm)", normalized)
         or normalized in {"noon", "midnight"}
     )
+
+
+def _remove_relative_time_aside(text: str, value: str) -> str:
+    if not _RELATIVE_TIME_PATTERN.fullmatch(value.strip()):
+        return text
+    return re.sub(_RELATIVE_TIME_PATTERN, _collapse_prefix, text, count=1)
 
 
 def _collapse_prefix(match: re.Match[str]) -> str:

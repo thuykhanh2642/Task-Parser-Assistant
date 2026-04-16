@@ -83,3 +83,20 @@ def test_reminder_intent_survives_wake_word_preprocessing() -> None:
     assert result.date == "today"
     assert result.command == "remind"
     assert result.category == "School"
+
+
+def test_relative_minute_time_is_extracted_without_date_ambiguity() -> None:
+    result = parse_task("go to class in 1 min")
+
+    assert result.task == "go to class"
+    assert result.time == "in 1 minute"
+    assert result.date is None
+    assert "A time was found without a specific date." not in result.ambiguities
+
+
+def test_relative_hour_time_is_extracted_from_reminder_phrase() -> None:
+    result = parse_task("Remind me to submit the report in 2 hours")
+
+    assert result.task == "submit the report"
+    assert result.time == "in 2 hours"
+    assert result.command == "remind"

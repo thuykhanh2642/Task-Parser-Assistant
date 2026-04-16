@@ -6,6 +6,15 @@ from schemas import ParseResponse
 from task_extractor import extract_task
 
 
+def _is_relative_time(value: str | None) -> bool:
+    if not value:
+        return False
+    normalized = value.strip().lower()
+    return normalized.startswith("in ") and any(
+        unit in normalized for unit in ("second", "minute", "hour")
+    )
+
+
 def parse_task(text: str) -> ParseResponse:
     cleaned_text = preprocess_text(text)
     entities = extract_entities(cleaned_text, original_text=text)
@@ -59,7 +68,7 @@ def _analyze_parse(
     if entities.get("date") and not entities.get("time"):
         ambiguities.append("A date was found without a specific time.")
 
-    if entities.get("time") and not entities.get("date"):
+    if entities.get("time") and not entities.get("date") and not _is_relative_time(entities.get("time")):
         ambiguities.append("A time was found without a specific date.")
 
     if not entities.get("category"):

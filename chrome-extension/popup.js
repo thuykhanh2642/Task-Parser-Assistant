@@ -157,12 +157,18 @@ function confidenceClass(value) {
 function resolveReminderTimestamp(parseResult) {
   const dateText = parseResult?.date;
   const timeText = parseResult?.time || inferTimeText(parseResult);
-  if (!dateText || !timeText) {
+  if (!timeText) {
     return null;
   }
 
   const now = new Date();
-  const baseDate = resolveDate(dateText, now);
+  const relativeReminderAt = resolveRelativeReminder(timeText, now);
+  if (relativeReminderAt) {
+    return relativeReminderAt;
+  }
+
+  const hasExplicitDate = Boolean(dateText);
+  const baseDate = hasExplicitDate ? resolveDate(dateText, now) : startOfLocalDay(now);
   const timeParts = resolveTime(timeText, baseDate, now);
 
   if (!baseDate || !timeParts) {
@@ -173,6 +179,9 @@ function resolveReminderTimestamp(parseResult) {
   reminderAt.setHours(timeParts.hours, timeParts.minutes, 0, 0);
 
   if (reminderAt <= now) {
+    if (!hasExplicitDate) {
+      return resolveImplicitFutureReminder(reminderAt, timeText, now);
+    }
     if (isSameLocalDay(baseDate, now)) {
       return bumpFutureReminder(reminderAt, now);
     }
@@ -180,6 +189,49 @@ function resolveReminderTimestamp(parseResult) {
   }
 
   return reminderAt;
+}
+
+function startOfLocalDay(date) {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+}
+
+function resolveImplicitFutureReminder(reminderAt, timeText, now) {
+  const normalized = String(timeText).trim().toLowerCase();
+
+  if (normalized === "soon" || normalized === "later today") {
+    return bumpFutureReminder(reminderAt, now);
+  }
+
+  const next = new Date(reminderAt);
+  next.setDate(next.getDate() + 1);
+  return next;
+}
+
+function resolveRelativeReminder(value, now) {
+  const normalized = String(value).trim().toLowerCase();
+  const match = normalized.match(/^in\s+(\d+)\s+(second|seconds|minute|minutes|hour|hours)$/);
+  if (!match) {
+    return null;
+  }
+
+  const amount = Number(match[1]);
+  const unit = match[2];
+  const next = new Date(now);
+
+  if (unit.startsWith("second")) {
+    next.setSeconds(next.getSeconds() + amount, 0);
+    return next;
+  }
+  if (unit.startsWith("minute")) {
+    next.setMinutes(next.getMinutes() + amount, 0, 0);
+    return next;
+  }
+
+  next.setMinutes(0, 0, 0);
+  next.setHours(next.getHours() + amount);
+  return next;
 }
 
 function inferTimeText(parseResult) {
